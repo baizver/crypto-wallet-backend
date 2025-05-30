@@ -1,26 +1,24 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const cors = require("cors");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
 
-let users = {};
+app.post("/userdata", (req, res) => {
+    const { id, username, first_name } = req.body;
+    console.log("📥 Получены данные:", { id, username, first_name });
 
-app.post('/api/register', (req, res) => {
-    const { user_id, first_name } = req.body;
-    if (!users[user_id]) {
-        users[user_id] = { first_name, balance_usdt: 3.00, tx: [] };
-        console.log(`✅ Registered new user: ${first_name} (${user_id})`);
-    }
-    res.json({ status: 'ok' });
+    // можно сюда добавить сохранение в БД или отправку куда-либо
+    res.json({ status: "ok", received: { id, username, first_name } });
 });
 
-app.get('/api/user/:id', (req, res) => {
-    const user = users[req.params.id];
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
+app.get("/", (req, res) => {
+    res.send("✅ Backend is live");
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
