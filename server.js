@@ -36,6 +36,14 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+// 📄 Схема чеков
+const checkSchema = new mongoose.Schema({
+    code: String,
+    amount: Number,
+    used: { type: Boolean, default: false }
+});
+const Check = mongoose.model("Check", checkSchema);
+
 // 📥 Принимаем данные от WebApp
 app.post("/userdata", async (req, res) => {
     const { id, username, first_name } = req.body;
@@ -88,6 +96,60 @@ app.get("/transactions/:userId/:token", async (req, res) => {
 // 🔍 Проверка
 app.get("/", (req, res) => {
     res.send("✅ Backend is live with MongoDB Atlas");
+});
+// ➕ Создание нового чека
+app.post("/create-check", async (req, res) => {
+    const { code, amount } = req.body;
+
+    try {
+        await Check.create({ code, amount });
+        res.json({ success: true, code, amount });
+    } catch (err) {
+        console.error("❌ Error creating check:", err);
+        res.status(500).json({ success: false });
+    }
+});
+// ✅ Активация чека по коду
+app.post("/apply-check", async (req, res) => {
+    const { userId, username, first_name, code } = req.body;
+
+    const check = await Check.findOne({ code, used: false });
+    if (!check) return res.json({ error: "Invalid or already used check" });
+
+    let user = await User.findOne({ id: userId });
+
+    if (!user) {
+        user = new User({
+            id: userId,
+            username,
+            first_name,
+            balance: { USDT: check.amount },
+            transactions: {
+                USDT: [{
+                    type: "receive",
+                    address: `Check: ${code}`,
+                    amount: check.amount,
+                    usd: check.amount,
+                    date: new Date().toISOString().split("T")[0]
+                }]
+            }
+        });
+    } else {
+        user.balance.USDT += check.amount;
+        user.transactions.USDT.push({
+            type: "receive",
+            address: `Check: ${code}`,
+            amount: check.amount,
+            usd: check.amount,
+            date: new Date().toISOString().split("T")[0]
+        });
+    }
+
+    await user.save();
+    check.used = true;
+    await check.save();
+
+    res.json({ success: true, added: check.amount });
 });
 
 app.listen(PORT, () => {
