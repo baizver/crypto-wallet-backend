@@ -5,7 +5,13 @@ const mongoose = require("mongoose");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// ✅ Разрешаем CORS для фронта
+app.use(cors({
+    origin: "https://crypto-wallet-web.onrender.com", // или '*' если хочешь открыть для всех
+    methods: ["GET", "POST"],
+    credentials: false
+}));
+
 app.use(express.json());
 
 // ✅ Подключение к MongoDB Atlas
@@ -43,9 +49,9 @@ const checkSchema = new mongoose.Schema({
     amount: Number,
     used: { type: Boolean, default: false }
 });
-
 const Check = mongoose.model("Check", checkSchema);
 
+// 👤 Создание или обновление пользователя
 app.post("/userdata", async (req, res) => {
     const { id, username = "", first_name = "" } = req.body;
 
@@ -81,9 +87,7 @@ app.post("/userdata", async (req, res) => {
     }
 });
 
-
-
-// 📤 Получить баланс
+// 💰 Баланс
 app.get("/balance/:userId", async (req, res) => {
     const { userId } = req.params;
     const user = await User.findOne({ id: userId });
@@ -92,7 +96,7 @@ app.get("/balance/:userId", async (req, res) => {
     res.json(user.balance);
 });
 
-// 📤 Получить историю транзакций
+// 📜 История транзакций
 app.get("/transactions/:userId/:token", async (req, res) => {
     const { userId, token } = req.params;
     const user = await User.findOne({ id: userId });
@@ -101,11 +105,12 @@ app.get("/transactions/:userId/:token", async (req, res) => {
     res.json(user.transactions[token] || []);
 });
 
-// 🔍 Проверка
+// 🔍 Проверка сервера
 app.get("/", (req, res) => {
     res.send("✅ Backend is live with MongoDB Atlas");
 });
-// ➕ Создание нового чека
+
+// 🧾 Создание чека
 app.post("/create-check", async (req, res) => {
     const { code, amount } = req.body;
 
@@ -117,7 +122,8 @@ app.post("/create-check", async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
-// ✅ Активация чека по коду
+
+// ✅ Применение чека
 app.post("/apply-check", async (req, res) => {
     const { userId, username, first_name, code } = req.body;
 
@@ -163,9 +169,9 @@ app.post("/apply-check", async (req, res) => {
         newBalance: user.balance,
         newTxs: user.transactions.USDT
     });
-
 });
 
+// 🚀 Запуск сервера
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
