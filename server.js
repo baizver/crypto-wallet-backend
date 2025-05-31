@@ -13,6 +13,15 @@ mongoose.connect("mongodb+srv://darhanalexeev1:YP9pCRpd4kCqu7Wt@cluster0.rbegw0n
     .then(() => console.log("✅ Connected to MongoDB Atlas"))
     .catch((err) => console.error("❌ MongoDB connection error:", err));
 
+// 📄 Схема одной транзакции
+const transactionSchema = new mongoose.Schema({
+    type: String,
+    address: String,
+    amount: Number,
+    usd: Number,
+    date: String
+});
+
 // 🔖 Схема пользователя
 const userSchema = new mongoose.Schema({
     id: String,
@@ -22,15 +31,7 @@ const userSchema = new mongoose.Schema({
         USDT: { type: Number, default: 0 }
     },
     transactions: {
-        USDT: [
-            {
-                type: String,
-                address: String,
-                amount: Number,
-                usd: Number,
-                date: String
-            }
-        ]
+        USDT: { type: [transactionSchema], default: [] }
     }
 });
 
@@ -42,38 +43,45 @@ const checkSchema = new mongoose.Schema({
     amount: Number,
     used: { type: Boolean, default: false }
 });
+
 const Check = mongoose.model("Check", checkSchema);
 
-// 📥 Принимаем данные от WebApp
 app.post("/userdata", async (req, res) => {
-    const { id, username, first_name } = req.body;
+    const { id, username = "", first_name = "" } = req.body;
 
-    let user = await User.findOne({ id });
+    try {
+        let user = await User.findOne({ id });
 
-    if (!user) {
-        user = new User({
-            id,
-            username,
-            first_name,
-            balance: { USDT: 3.00 },
-            transactions: {
-                USDT: [
-                    {
-                        type: "receive",
-                        address: `Referral: ${username || "N/A"}`,
-                        amount: 3.00,
-                        usd: 3.00,
-                        date: new Date().toISOString().split("T")[0]
-                    }
-                ]
-            }
-        });
-        await user.save();
+        if (!user) {
+            user = new User({
+                id,
+                username,
+                first_name,
+                balance: { USDT: 3.00 },
+                transactions: {
+                    USDT: [
+                        {
+                            type: "receive",
+                            address: `Referral: ${username || "Anonymous"}`,
+                            amount: 3.00,
+                            usd: 3.00,
+                            date: new Date().toISOString().split("T")[0]
+                        }
+                    ]
+                }
+            });
+            await user.save();
+        }
+
+        console.log("📥 Получены данные:", { id, username, first_name });
+        res.json({ status: "ok", received: { id, username, first_name } });
+    } catch (err) {
+        console.error("❌ Error in /userdata:", err);
+        res.status(500).json({ error: "Server error in /userdata" });
     }
-
-    console.log("📥 Получены данные:", { id, username, first_name });
-    res.json({ status: "ok", received: { id, username, first_name } });
 });
+
+
 
 // 📤 Получить баланс
 app.get("/balance/:userId", async (req, res) => {
