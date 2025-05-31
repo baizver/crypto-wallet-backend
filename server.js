@@ -149,7 +149,13 @@ app.post("/apply-check", async (req, res) => {
     check.used = true;
     await check.save();
 
-    res.json({ success: true, added: check.amount });
+    res.json({
+        success: true,
+        added: check.amount,
+        newBalance: user.balance,
+        newTxs: user.transactions.USDT
+    });
+
 });
 
 app.listen(PORT, () => {
